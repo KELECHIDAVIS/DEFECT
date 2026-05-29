@@ -1,0 +1,224 @@
+================================================================
+D.E.F.E.C.T. -- State Vector Embedding Reference
+Deep Expert Framework for Evaluating Combinatorial Tasks
+Phase 1: Combat Agent
+================================================================
+
+NORMALIZATION RULE OF THUMB
+------------------------------------------------------------
+- Values that can reach 20+ (HP, raw damage): divide by a
+  reasonable ceiling for your card/enemy set
+- Values between 0 and ~5 (stack counts, card draws): leave
+  as-is, the scale difference is small enough not to matter
+- Binary flags: always 0 or 1
+- When unsure: normalize. It never hurts, it sometimes helps.
+
+
+================================================================
+SECTION 1: PLAYER STATE
+11 dimensions
+================================================================
+
+Index  Name                  Type     Notes
+-----  --------------------  -------  --------------------------
+0      player_hp_current     float    raw HP / player_max_hp
+1      player_hp_max         float    raw max HP / 100
+2      player_block          float    current block / 30
+3      energy_current        int      0-3, fine unnormalized
+4      energy_max            int      usually 3, fine unnormalized
+5      player_vulnerable     int      stack count (0-5 typically)
+6      player_weak           int      stack count
+7      player_frail          int      stack count
+8      player_strength       int      can be negative, -5 to +5
+9      draw_pile_ratio       float    draw / (draw + discard)
+10     discard_pile_ratio    float    discard / (draw + discard)
+
+Notes:
+- player_strength can go negative (some enemy debuffs do this)
+- draw and discard encoded as ratios not raw counts. Keeps
+  values between 0-1 regardless of deck size, and is more
+  semantically meaningful -- knowing you are halfway through
+  your deck is more useful than knowing there are 17 cards
+  left. Scales naturally to Phase 2 without any changes.
+- Edge case: if draw + discard = 0 (all cards in hand or
+  exhausted), set both ratios to 0 to avoid divide by zero.
+- Per-card encoding of draw/discard deferred to Phase 2
+  card picking agent.
+
+
+================================================================
+SECTION 2: HAND (per card slot)
+18 dimensions x 10 slots = 180 dimensions total
+================================================================
+
+Slots 0-4:   cards drawn this turn (usually 5)
+Slots 5-9:   padding slots (set to all zeros if empty)
+Slot valid:  first dimension of each slot is is_present flag
+
+Per-card vector (18 dims):
+
+Index  Name                  Type     Notes
+-----  --------------------  -------  --------------------------
+0      is_present            bit      0 = padding, 1 = real card
+1      playable              bit      0 for status/curse/no mana
+2      cost                  int      raw cost (0-3), unnormalized
+3      type_attack           bit      one-hot: exactly one of
+4      type_skill            bit      these five will be 1
+5      type_power            bit      per card
+6      type_status           bit
+7      type_curse            bit      (phase 1: likely always 0)
+8      damage                float    raw damage / 30
+9      hits                  int      number of hits (Cleave = 1,
+                                      some multi-hit cards > 1)
+10     block                 float    raw block / 20
+11     targets_single        bit      hits one enemy
+12     targets_all           bit      hits all enemies (AoE)
+13     applies_vulnerable    int      stacks applied (0 if none)
+14     applies_weak          int      stacks applied
+15     applies_strength      int      can be negative (debuff)
+16     draws_cards           int      extra cards drawn on play
+17     exhausts              bit      1 = card is removed from
+                                      combat after playing
+
+Notes:
+- Two Strike cards at different hand positions produce the
+  same vector. This is intentional -- the network learns what
+  Strike does, not where it sits. This is the key advantage
+  over positional indexing.
+- Status cards: is_present=1, playable=0, all effect dims=0
+- Power cards: exhausts=0 but removed after combat ends
+  (not relevant to combat agent decision, ignore)
+- For Phase 1 with Ironclad starter deck, curse slots will
+  always be 0. Keep the bit for forward compatibility.
+
+
+================================================================
+SECTION 3: ENEMY SLOTS (per enemy)
+15 dimensions x 5 slots = 75 dimensions total
+================================================================
+
+Up to 5 enemy slots. Empty slots padded with zeros.
+
+Per-enemy vector (15 dims):
+
+Index  Name                  Type     Notes
+-----  --------------------  -------  --------------------------
+0      is_present            bit      0 = slot empty
+1      hp_normalized         float    current HP / max HP
+2      hp_current            float    raw HP / 100
+3      block                 float    current block / 30
+4      vulnerable_stacks     int      stack count
+5      weak_stacks           int      stack count
+6      strength              int      positive=buffed, 0=normal
+7      intent_attack         bit      multi-hot: multiple bits
+8      intent_block          bit      can be 1 simultaneously
+9      intent_buff_self      bit      (e.g. attack + buff)
+10     intent_debuff         bit
+11     intent_sleep          bit      stunned/escaping/nothing
+12     intent_unknown        bit
+13     attack_damage         float    0 if not attacking,
+                                      else raw damage / 30
+14     attack_times          int      1 for most, >1 for multi-hit
+
+Notes:
+- Multi-hot intent encoding handles combination intents cleanly
+  without needing a separate category per combination
+- Phase 1 benchmark enemy order:
+    Fight 1: Louse (slot 0 only, slots 1-4 empty)
+    Fight 2: medium HP single (slot 0 only, slots 1-4 empty)
+    Fight 3: two enemies (slots 0 and 1, slots 2-4 empty)
+- Max 5 enemy slots covers all possible encounters in the
+  full game. Unused slots are always zeroed (is_present=0).
+- Two-enemy fight introduces real target selection for the
+  first time. Validate multi-target action selection works
+  before including in training.
+
+
+================================================================
+SECTION 4: FULL STATE TENSOR ASSEMBLY
+================================================================
+
+Component               Dims    Notes
+----------------------  ------  ------------------------------
+Player state            11
+Hand (10 slots x 18)    180
+Enemy slots (5 x 15)    75
+----------------------  ------
+TOTAL                   266
+
+This is the input vector fed to the network on each step.
+All 236 values are concatenated into a single flat vector.
+
+
+================================================================
+SECTION 5: NORMALIZATION CEILINGS (Phase 1)
+================================================================
+
+These are the divisors used to normalize each raw value.
+Adjust if your card set or enemy set changes significantly.
+
+Value               Ceiling    Rationale
+------------------  ---------  --------------------------------
+Player HP           80         Ironclad starting HP
+Player max HP       100        generous ceiling
+Damage per hit      30         highest single-hit in starter set
+Block per card      20         highest block in starter set
+Enemy HP            100        generous ceiling
+Enemy attack dmg    30         adjust if enemies hit harder
+Card cost           none       left as raw int 0-3, same scale
+                               as energy_current so no ceiling
+                               needed. playable bit already
+                               encodes whether cost <= energy.
+Draw pile           ratio      no ceiling needed, always 0-1
+Discard pile        ratio      no ceiling needed, always 0-1
+
+Stack counts (vulnerable, weak, strength) are left unnormalized.
+They typically stay between 0-5 in practice. If you see
+stack counts climbing to 10+ in testing, normalize by 5.
+
+
+================================================================
+SECTION 6: WHAT IS DEFERRED TO PHASE 2
+================================================================
+
+These were deliberately excluded from Phase 1 to keep the
+combat agent focused. Add them when building the card picking
+agent and pathing agent.
+
+- Draw pile per-card encoding (just size count in Phase 1)
+- Exhaust pile per-card encoding (just size count in Phase 1)
+- Discard pile per-card encoding (just size count in Phase 1)
+- Relic effects
+- Deck confidence score (output of card picking agent,
+  input to pathing agent)
+- Full run state (floor number, map layout, gold, potions)
+
+
+================================================================
+SECTION 7: QUICK IMPLEMENTATION CHECKLIST
+================================================================
+
+Before training:
+[ ] Verify all values fall in expected ranges after encoding
+    (print min/max of each dimension over 100 random states)
+[ ] Verify two identical cards produce identical vectors
+    regardless of hand position
+[ ] Verify padding slots are all zeros, not random values
+[ ] Verify is_present=0 slots are fully zeroed
+[ ] Verify action masking correctly marks unplayable cards
+    (playable bit = 0) as invalid actions
+[ ] Verify enemy intent vector updates correctly each turn
+[ ] Normalize all raw values before feeding to network
+
+During training:
+[ ] If loss spikes: check for unnormalized raw HP values
+    leaking in (common mistake)
+[ ] If agent ignores card type: check one-hot encoding is
+    working (exactly one type bit should be 1 per card)
+[ ] If agent never blocks: check block dimension is non-zero
+    for Defend cards and normalized correctly
+
+================================================================
+Last updated: Phase 1 design -- Ironclad, starter deck,
+static 3-fight benchmark sequence
+================================================================
