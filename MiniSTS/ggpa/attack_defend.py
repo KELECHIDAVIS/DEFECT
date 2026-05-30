@@ -1,6 +1,6 @@
-#if agent is going to take > 5 damage (1 block) then block twice, then highest attack 
-# else if agent is going to take <=5 damage block once, then highest value attack 
-# else just use the highest value attack 
+#if agent is going to take > 5 damage (1 block) then block twice, then highest attack on lowest health enemy
+# else if agent is going to take <=5 damage block once, then highest value attack on lowest health enemy
+# else just use the highest value attack on lowest health enemy
 
 #currently just does random actions 
 from __future__ import annotations
@@ -20,13 +20,19 @@ class AttackDefendBot(GGPA):
     def __init__(self):
         super().__init__("AttackDefendBot")
 
+    #if agent is going to take > 5 damage (1 block) then block twice, then highest attack on lowest health enemy
+    # else if agent is going to take <=5 damage block once, then highest value attack on lowest health enemy
+    # else just use the highest value attack on lowest health enemy
+
     def choose_card(self, game_state: GameState, battle_state: BattleState) -> EndAgentTurn|PlayCard:
         options = self.get_choose_card_options(game_state, battle_state)
         return random.choice(options)
     
+    #attack lowest health enemy
     def choose_agent_target(self, battle_state: BattleState, list_name: str, agent_list: list[Agent]) -> Agent:
         return random.choice(agent_list)
     
+    # doesn't really matter 
     def choose_card_target(self, battle_state: BattleState, list_name: str, card_list: list[Card]) -> Card:
         return random.choice(card_list)
     
