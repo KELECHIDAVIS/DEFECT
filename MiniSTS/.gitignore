@@ -8,3 +8,4 @@ evaluation_results/
 ggpa/mcts_bot.py
 notes.txt
 ./auth.py
+.venv
