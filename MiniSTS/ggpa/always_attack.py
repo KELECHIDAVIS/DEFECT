@@ -22,24 +22,31 @@ class AlwaysAttackBot(GGPA):
         options = self.get_choose_card_options(game_state, battle_state)
         
         # check all attack cards, select one with highest damage
-        best_attack = options[0] # could be end turn option
+        best_attack = None
         for option in options: 
-            #skip if it's the end turn option
+            # skip if it's the end turn option
             if type(option) is EndAgentTurn: 
                 continue
             
             current_card = battle_state.hand[option.get_card_index()]
             
-            if current_card != CardType.ATTACK:
-                continue # skip if not attack 
+            # skip if not an attack card
+            if current_card.card_type != CardType.ATTACK:
+                continue
             
-            #if current attack has higher value then best change 
+            # if no attack found yet, set this as the first candidate
+            if best_attack is None:
+                best_attack = option
+                continue
+            
+            # compare damage values, update best if current card hits harder
             best_attack_card = battle_state.hand[best_attack.card_index]
-            
-            #some cards have multiple actions (like bash: 8 damage and 2 vulnerable), so just get first action
             if best_attack_card.actions[0].values[0].get() < current_card.actions[0].values[0].get():
-                best_attack = option # set option 
-               
+                best_attack = option
+        
+        # if no attack cards available, end turn
+        if best_attack is None:
+            return next(o for o in options if type(o) is EndAgentTurn)
         
         return best_attack
     
