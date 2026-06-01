@@ -11,11 +11,11 @@ if TYPE_CHECKING:
     from agent import Agent
     from card import Card
 
-from rl_algos import dqn
+from ggpa.rl_algos import dqn
 
-class RLBot(GGPA):
+class DQNBot(GGPA):
     def __init__(self):
-        super().__init__("RLBot")
+        super().__init__("DQNBot")
 
 
     # show agent all card options, then have them pick 
