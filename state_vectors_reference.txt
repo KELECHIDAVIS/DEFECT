@@ -147,7 +147,7 @@ Enemy slots (5 x 15)    75
 TOTAL                   266
 
 This is the input vector fed to the network on each step.
-All 236 values are concatenated into a single flat vector.
+All 266 values are concatenated into a single flat vector.
 
 
 ================================================================

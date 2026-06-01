@@ -4,11 +4,11 @@ from config import Character, Verbose
 from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
 from card import CardGen, CardRepo
 import time
-from ggpa.human_input import HumanInput
 from ggpa.random_bot import RandomBot
 from ggpa.backtrack import BacktrackBot
 from ggpa.dqn_agent import DQNBot
 from ggpa.always_attack import AlwaysAttackBot
+from ggpa.rl_algos.training_logger import TrainingLogger
 
 import torch
 
@@ -29,6 +29,8 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
 
     battle_state.initiate_log()
     step = 0
+    episode_reward = 0.0
+    prev_hp = battle_state.player.health
 
     while not battle_state.ended():
 
@@ -40,13 +42,11 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
         state = agent.get_state_vector(game_state, battle_state)
         mask = agent.get_action_mask(game_state, battle_state)
 
-        # choose action -- this also stores current_action index on the agent
+        # choose action -- also stores current_action index on the agent
         action = agent.choose_card(game_state, battle_state)
         action_tensor = torch.tensor([[agent.current_action]], device=dqn.device)
 
-        # execute the action in the environment
-        # if action is EndAgentTurn, tick_player also runs enemy turn and draws next hand
-        # if action is PlayCard, tick_player only plays that one card
+        # execute action -- if EndAgentTurn, also runs enemy turn and draws next hand
         battle_state.tick_player(action)
 
         # compute step reward from hp changes
@@ -64,10 +64,12 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
             result = battle_state.get_end_result()
             step_reward += float(result)  # +1.0 win, -1.0 loss
             next_state = None
-            next_mask = torch.zeros(dqn.N_ACTIONS, device=dqn.device)
+            next_mask = torch.zeros(11, device=dqn.device)
         else:
             next_state = agent.get_state_vector(game_state, battle_state)
             next_mask = agent.get_action_mask(game_state, battle_state)
+
+        episode_reward += step_reward
 
         # store transition in replay buffer
         reward_tensor = torch.tensor([step_reward], dtype=torch.float32, device=dqn.device)
@@ -87,7 +89,11 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
 
         step += 1
 
-    return step
+    result = battle_state.get_end_result()
+    win = result == 1
+    final_hp = battle_state.player.health
+
+    return episode_reward, win, final_hp, step
 
 
 def main():
@@ -99,29 +105,55 @@ def main():
     # more episodes when gpu is available since training is faster
     num_episodes = 50
     if torch.cuda.is_available() or torch.backends.mps.is_available():
-        num_episodes = 600
+        num_episodes = 3000
+
+    # training logger -- only used for dqn, saves to training_log.json
+    logger = TrainingLogger(log_path='training_log.json', save_every=10) if isinstance(agent, DQNBot) else None
 
     for i_episode in range(num_episodes):
         game_state = GameState(Character.IRON_CLAD, agent, 0)
         game_state.set_deck(*CardRepo.get_scenario_0()[1])
         start = time.time()
 
-        # dqn agent needs per-step control for training -- use tick_player loop
+        # dqn uses tick_player loop for per-step training control
         # all other agents use run() which handles the full episode automatically
         if isinstance(agent, DQNBot):
-            # suppress logging during training to avoid slowdown
             battle_state = BattleState(game_state, JawWorm(game_state), verbose=Verbose.NO_LOG)
-            steps = run_dqn_episode(agent, game_state, battle_state)
-            result = battle_state.get_end_result()
+            episode_reward, win, final_hp, steps = run_dqn_episode(agent, game_state, battle_state)
+
+            # log training metrics
+            logger.log_episode(episode_reward, win, final_hp, steps)
+
+            # print summary every 10 episodes
+            if (i_episode + 1) % 10 == 0:
+                logger.print_summary()
+
             end = time.time()
-            print(f"episode {i_episode}: {'win' if result == 1 else 'lose'} "
-                  f"in {steps} steps | {end - start:.2f}s | "
-                  f"player hp: {battle_state.player.health}/{battle_state.player.max_health}")
+            print(f"episode {i_episode + 1}/{num_episodes}: "
+                  f"{'WIN' if win else 'LOSE'} | "
+                  f"hp: {final_hp}/80 | "
+                  f"reward: {episode_reward:.3f} | "
+                  f"steps: {steps} | "
+                  f"{end - start:.2f}s")
+            
+            # # check convergence every 200 episodes
+            # if (i_episode + 1) % 200 == 0 and len(logger.episode_wins) >= 400:
+            #     recent = sum(logger.episode_wins[-200:]) / 200
+            #     previous = sum(logger.episode_wins[-400:-200]) / 200
+            #     if abs(recent - previous) < 0.02:
+            #         print(f'converged at episode {i_episode + 1}')
+            #         break
         else:
             battle_state = BattleState(game_state, JawWorm(game_state), verbose=Verbose.LOG)
             battle_state.run()
             end = time.time()
             print(f"run ended in {end - start:.2f} seconds")
+
+    # save final training log
+    if logger is not None:
+        logger.save()
+        print(f'\ntraining complete. run plot_results.py to visualize.')
+        print(f'to evaluate all agents: python3.11 evaluate.py')
 
 
 if __name__ == '__main__':

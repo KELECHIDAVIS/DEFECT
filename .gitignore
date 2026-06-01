@@ -1,0 +1,17 @@
+# api keys -- never commit
+MiniSTS/auth.py
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+MiniSTS/.venv/
+# training artifacts
+*.json
+*.log
+plots/
+
+# pytorch model checkpoints
+*.pt
+*.pth
