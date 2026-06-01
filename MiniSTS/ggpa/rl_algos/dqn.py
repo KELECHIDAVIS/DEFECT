@@ -97,10 +97,10 @@ EPS_END = 0.01
 EPS_DECAY = 10000
 TAU = 0.005
 LR = 3e-4
-
+N_ACTIONS =11 
 
 # Get number of actions from gym action space
-n_actions = 11 # max 10 card choices, then end turn 
+n_actions = N_ACTIONS # max 10 card choices, then end turn 
 # Get the number of state observations
 
 n_observations = 266 # length of our flattened feature vector 
