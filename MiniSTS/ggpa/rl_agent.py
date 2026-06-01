@@ -11,6 +11,8 @@ if TYPE_CHECKING:
     from agent import Agent
     from card import Card
 
+from rl_algos import dqn
+
 class RLBot(GGPA):
     def __init__(self):
         super().__init__("RLBot")

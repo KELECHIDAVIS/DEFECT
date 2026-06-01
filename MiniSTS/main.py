@@ -11,14 +11,15 @@ from ggpa.prompt2 import PromptOption
 from ggpa.backtrack import BacktrackBot
 #from ggpa.backtrack_parallel import BacktrackParallelBot
 
-from ggpa.rl_agent import RLBot
+from ggpa.dqn_agent import DQNBot
 from ggpa.always_attack import AlwaysAttackBot
 from ggpa.attack_defend import AttackDefendBot
 
 def main():
     #agent = HumanInput(True)
-    agent = AlwaysAttackBot()
-     
+    #agent = AlwaysAttackBot()
+    agent = DQNBot()
+    
     # agent = BacktrackBot(4, False)
     # agent = ChatGPTBot(ChatGPTBot.ModelName.GPT_Turbo_35, PromptOption.CoT, 0, False, 1)
     game_state = GameState(Character.IRON_CLAD, agent, 0)
