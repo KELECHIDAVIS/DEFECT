@@ -43,7 +43,12 @@ try:
 except ImportError:
     LLM_AVAILABLE = False
 
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', None)
+# read api key from environment variable or auth.py fallback
+try:
+    from auth import GPT_AUTH
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', GPT_AUTH)
+except ImportError:
+    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', None)
 
 
 # fixed seeds for reproducible evaluation -- all agents face identical scenarios
@@ -221,13 +226,12 @@ def main():
 
     seeds = EVAL_SEEDS[:args.episodes]
 
-    # load existing results to append without re-running completed agents
-    results = {}
+    # always start fresh -- delete existing results if present
     if os.path.exists(args.output):
-        with open(args.output, 'r') as f:
-            results = json.load(f)
-        print(f'loaded existing results from {args.output}')
-        print(f'agents already evaluated: {list(results.keys())}')
+        os.remove(args.output)
+        print(f'removed existing {args.output} -- starting fresh')
+
+    results = {}
 
     agents_to_run = build_agents(args)
     if not agents_to_run:
