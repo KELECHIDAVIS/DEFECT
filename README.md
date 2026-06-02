@@ -132,16 +132,15 @@ python3.11 evaluate.py --agent llm_cot   # gpt-3.5-turbo, chain of thought
 get a key at platform.openai.com. 50 episodes costs under $1 with gpt-3.5-turbo.
 
 **evaluation summary table printed after each run:**
-```
-agent                     win rate     avg hp    avg dmg  avg turns
------------------------------------------------------------------
-Random                       4.0%        2.3       77.7       42.1
-AlwaysAttack                12.0%        8.1       71.9       38.4
-Backtrack (depth 3)         52.0%       25.9       54.1       31.2
-DQN                         38.0%       18.4       61.6       35.7
-LLM                         20.0%       11.7       68.3       40.1
-LLM CoT                     46.0%       23.4       56.6       33.8
-```
+
+| Agent | Win% | Avg HP | Avg Dmg | Avg Turns | HP (win) |
+|---|---|---|---|---|---|
+| Random | 76.0% | 26.3 | 53.7 | 24.6 | 34.6 |
+| AlwaysAttack | 100.0% | 55.0 | 25.0 | 9.7 | 55.0 |
+| Backtrack (depth 3) | 100.0% | 53.6 | 26.4 | 12.1 | 53.6 |
+| **DQN** | **100.0%** | **58.4** | **21.6** | **10.6** | **58.4** |
+| LLM | 100.0% | 51.6 | 28.4 | 16.1 | 51.6 |
+
 
 ---
 
