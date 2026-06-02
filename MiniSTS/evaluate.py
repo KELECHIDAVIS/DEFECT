@@ -173,8 +173,8 @@ def build_agents(args) -> list:
         agents.append(('Backtrack (depth 3)', BacktrackBot(3, False)))
 
     if args.agent in ('all', 'dqn'):
-        dqn_agent = DQNBot()
-        dqn_agent.eval_mode = True  # pure exploitation, no memory storage
+        dqn_agent = DQNBot(eval_mode=True)
+        
         agents.append(('DQN', dqn_agent))
 
     if args.agent in ('all', 'llm', 'llm_cot'):

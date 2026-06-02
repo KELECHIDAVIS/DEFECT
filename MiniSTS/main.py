@@ -20,8 +20,7 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
     internally, so our training loop controls the full step cycle.
 
     per-step reward breakdown:
-      - +damage dealt to enemies / 30.0 (normalized)
-      - -hp lost by player / 80.0 (normalized)
+      - current hp / 80.0 (normalized) #incentivize maximizing hp 
       - +1.0 bonus for winning the battle
       - -1.0 penalty for losing the battle
     '''
@@ -34,10 +33,6 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
 
     while not battle_state.ended():
 
-        # record hp before action for reward computation
-        prev_player_hp = battle_state.player.health
-        prev_enemy_hp = sum(e.health for e in battle_state.enemies if not e.is_dead())
-
         # get state vector and action mask for this step
         state = agent.get_state_vector(game_state, battle_state)
         mask = agent.get_action_mask(game_state, battle_state)
@@ -49,20 +44,15 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
         # execute action -- if EndAgentTurn, also runs enemy turn and draws next hand
         battle_state.tick_player(action)
 
-        # compute step reward from hp changes
-        new_player_hp = battle_state.player.health
-        new_enemy_hp = sum(e.health for e in battle_state.enemies if not e.is_dead())
-
-        hp_lost = prev_player_hp - new_player_hp
-        damage_dealt = prev_enemy_hp - new_enemy_hp
-
-        step_reward = (damage_dealt / 30.0) - (hp_lost / 80.0)
-
-        # terminal reward -- add win/loss bonus and set next_state to None
+        step_reward = 0.0
         done = battle_state.ended()
+
         if done:
             result = battle_state.get_end_result()
-            step_reward += float(result)  # +1.0 win, -1.0 loss
+            final_hp = battle_state.player.health
+            # win: +1.0 bonus + normalized hp remaining encourages winning with hp left
+            # loss: -1.0 flat penalty
+            step_reward = (1.0 + final_hp / 80.0) if result == 1 else -1.0
             next_state = None
             next_mask = torch.zeros(11, device=dqn.device)
         else:
@@ -78,13 +68,12 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
         # optimize policy network on a random batch from replay buffer
         dqn.optimize_model()
 
-        # soft update target network weights toward policy network
-        # theta_target = TAU * theta_policy + (1 - TAU) * theta_target
+        # soft update target network
         target_state_dict = dqn.target_net.state_dict()
         policy_state_dict = dqn.policy_net.state_dict()
         for key in policy_state_dict:
             target_state_dict[key] = (policy_state_dict[key] * dqn.TAU +
-                                      target_state_dict[key] * (1 - dqn.TAU))
+                                    target_state_dict[key] * (1 - dqn.TAU))
         dqn.target_net.load_state_dict(target_state_dict)
 
         step += 1
@@ -149,11 +138,18 @@ def main():
             end = time.time()
             print(f"run ended in {end - start:.2f} seconds")
 
+    
+    
     # save final training log
     if logger is not None:
         logger.save()
         print(f'\ntraining complete. run plot_results.py to visualize.')
         print(f'to evaluate all agents: python3.11 evaluate.py')
+        
+    #save dqn model 
+    if isinstance(agent, DQNBot):
+        from ggpa.rl_algos import dqn
+        dqn.save_model('dqn_model.pt')
 
 
 if __name__ == '__main__':

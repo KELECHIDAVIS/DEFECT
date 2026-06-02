@@ -210,3 +210,24 @@ def optimize_model():
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+    
+# add to the bottom of dqn.py
+def save_model(path: str = 'dqn_model.pt'):
+    torch.save({
+        'policy_net': policy_net.state_dict(),
+        'target_net': target_net.state_dict(),
+        'steps_done': steps_done,
+    }, path)
+    print(f'model saved to {path}')
+
+def load_model(path: str = 'dqn_model.pt'):
+    global steps_done
+    if not torch.os.path.exists(path):
+        print(f'no model found at {path} -- using random weights')
+        return False
+    checkpoint = torch.load(path, map_location=device)
+    policy_net.load_state_dict(checkpoint['policy_net'])
+    target_net.load_state_dict(checkpoint['target_net'])
+    steps_done = checkpoint['steps_done']
+    print(f'model loaded from {path} (steps_done={steps_done})')
+    return True

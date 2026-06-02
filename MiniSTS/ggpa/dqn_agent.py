@@ -24,12 +24,19 @@ PLAYER_DIMS = 11        # dimensions for player state
 N_ACTIONS = 11          # 10 card slots + end turn (index 10)
 
 class DQNBot(GGPA):
-    def __init__(self):
+    def __init__(self, eval_mode: bool = False):
         super().__init__("DQNBot")
         # track current state and mask for use across choose_card and choose_agent_target
         self.current_state = None
         self.current_mask = None
         self.current_action = None
+        self.eval_mode = eval_mode
+
+        # load trained weights when in eval mode
+        if eval_mode:
+            from ggpa.rl_algos import dqn
+            dqn.load_model('dqn_model.pt')
+
 
     def _encode_card(self, card, is_playable: bool) -> list:
         '''encode a single card into an 18-dim vector based on state vector reference'''
