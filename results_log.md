@@ -227,13 +227,79 @@ fight result is a preview of a longer story.
 - [x] Run full agent evaluation with corrected DQN
 - [x] Update results_log with final table
 
-**Phase 1 completion -- three-fight benchmark:**
-- [ ] Design Fight 2: high HP enemy that punishes constant attacking
-      (80+ HP, 15-20 damage/turn, forces mixed attack/defend strategy)
-- [ ] Design Fight 3: two enemies, tests target selection
-- [ ] Re-evaluate all agents on three-fight benchmark
-- [ ] Confirm Finding 5 hypothesis: DQN's HP efficiency advantage translates
-      to win rate advantage once fights are chained
+**Phase 1 completion -- four-fight progressive benchmark:**
+
+The benchmark tests orthogonal strategic skills across four fights.
+HP carries over between fights. The Ironclad's starting Burning Blood relic
+heals 6 HP at the end of each won fight (capped at max HP), consistent with
+the real game. 6 HP recovery is small enough that HP-inefficient agents still
+compound a deficit over four fights while keeping the benchmark survivable.
+
+Implementation note: apply Burning Blood in the multi-fight runner directly
+between fights rather than through MiniSTS's relic system:
+```python
+BURNING_BLOOD_HEAL = 6
+if fight_result == 1:
+    player.health = min(player.health + BURNING_BLOOD_HEAL, player.max_health)
+```
+
+**Fight 1 -- JawWorm (baseline, already implemented)**
+- 40 HP, standard attacks
+- Skill tested: baseline combat competence
+- Expected: all non-random agents win, HP efficiency separates them
+- Do not change
+
+**Fight 2 -- High HP enemy with opening weakness window**
+- 80+ HP, 15-20 damage/turn once active
+- Opening mechanic: enemy applies a debuff (Weak or Vulnerable) to itself
+  for 2-3 turns at the start of combat, then transitions to full attacks
+- Skill tested: patience -- optimal policy is to hold aggressive cards
+  during the weakness window and burst during the debuff turns
+- Why 2-3 turns: single turn window is too noisy to learn; 2-3 turns creates
+  a clear enough pattern for Q-values to reflect the timing advantage
+- Expected: AlwaysAttack ignores the window and attacks immediately;
+  DQN should learn to exploit the damage multiplier
+
+**Fight 3 -- Two enemies with asymmetric threat**
+- Two enemies with meaningfully different stats -- NOT identical
+- Suggested: one high HP/low damage + one low HP/high damage, or one enemy
+  that buffs/heals the other if left alive
+- Skill tested: kill order and target prioritization
+- The buff/heal variant is strongest -- leaving the buffer alive compounds
+  negative consequences, requiring multi-turn reasoning
+- Expected: random and AlwaysAttack pick targets arbitrarily; DQN should
+  learn to prioritize the threatening or buffing target
+
+**Fight 4 (Miniboss) -- Cultist with Ritual**
+- Ritual mechanic: enemy damage scales each turn (1, 3, 5, 7, 9...)
+  and enemy buffs their own strength each turn
+- Skill tested: adaptive urgency -- agent must recognize when stalling is
+  fatal and switch from defensive to aggressive play under time pressure
+- This is the inverse of Fight 2: Fight 2 teaches patience, Fight 4 teaches
+  urgency. The agent needs both in its policy.
+- Why this is the strongest design: tests behavioral flexibility. An agent
+  that always turtles fails here. An agent that burned HP in earlier fights
+  may not survive the early Ritual scaling. Only an agent that managed HP
+  across all three prior fights AND learned urgency will consistently clear.
+- Expected: AlwaysAttack may do well on this fight in isolation (aggression
+  is correct) but arrives here damaged from earlier fights. Backtrack depth 3
+  may not look far enough ahead to see the scaling threat. DQN trained with
+  terminal HP reward has incentive to arrive healthy AND learn the Ritual signal.
+
+**Hypothesis to confirm:**
+The HP efficiency ranking from Experiment 1 (DQN > AlwaysAttack > Backtrack
+> LLM) should predict multi-fight win rate better than single-fight win rate.
+All agents hit 100% on a single fight -- HP efficiency is the leading
+indicator of who survives four sequential fights.
+
+**Paper framing:**
+"We extend the single-encounter setup with a four-fight progressive benchmark
+testing orthogonal strategic skills: Fight 1 establishes a baseline, Fight 2
+tests defensive timing, Fight 3 tests target prioritization, and Fight 4
+(Cultist with scaling Ritual damage) tests adaptive urgency under compounding
+threat. HP carries over between fights with 6 HP recovery per won fight
+consistent with the Ironclad's Burning Blood relic, making HP conservation
+a cross-fight strategic axis absent from prior evaluation work."
 
 **Ablation study (optional but strengthens paper):**
 - [ ] Train DQN with dense reward vs terminal reward, evaluate both correctly
@@ -241,6 +307,6 @@ fight result is a preview of a longer story.
 - [ ] This would salvage the original reward shaping hypothesis as a real finding
 
 **Paper structure:**
-- Section 4.1: Single-fight baseline (this experiment) -- ceiling effect + HP efficiency findings
-- Section 4.2: Three-fight progressive benchmark -- main contribution, confirms Finding 5
+- Section 4.1: Single-fight baseline -- ceiling effect + HP efficiency findings
+- Section 4.2: Four-fight progressive benchmark -- main contribution, confirms Finding 5
 - Section 4.3: Ablation -- reward shaping comparison (if run)
