@@ -251,7 +251,7 @@ if fight_result == 1:
 
 **Fight 2 -- High HP enemy with opening weakness window**
 - 80+ HP, 15-20 damage/turn once active
-- Opening mechanic: enemy applies a debuff (Weak or Vulnerable) to itself
+- Opening mechanic: enemy applies a debuff (Weak or Vulnerable) to us
   for 2-3 turns at the start of combat, then transitions to full attacks
 - Skill tested: patience -- optimal policy is to hold aggressive cards
   during the weakness window and burst during the debuff turns
