@@ -182,3 +182,18 @@ class GoblinWizard(Enemy):
         ward: Action = AddBlock(ConstValue(8)).To(SelfAgentTarget())
         action_set: ItemSet[Action] = RoundRobin(0, hex_spell, staff_strike, ward)
         super().__init__("GoblinWizard", max_health.get(), action_set)
+
+class Cultist(Enemy):
+    def __init__(self, game_state: GameState):
+        max_health = ConstValue(50)
+        # attack fires BEFORE ritual each turn -- gives exactly 1, 3, 5, 7, 9...
+        # turn 1: attack(1 + 0 str = 1), then ritual(+2 str)
+        # turn 2: attack(1 + 2 str = 3), then ritual(+2 str, total 4)
+        # turn 3: attack(1 + 4 str = 5), then ritual(+2 str, total 6)
+        # agent must kill quickly -- stalling becomes fatal around turn 5+
+        ritual_strike: Action = (DealAttackDamage(ConstValue(1))
+                                    .To(PlayerAgentTarget())
+                                    .And(ApplyStatus(ConstValue(2), StatusEffectRepo.STRENGTH)
+                                    .To(SelfAgentTarget())))
+        action_set: ItemSet[Action] = RoundRobin(0, ritual_strike)
+        super().__init__("Cultist", max_health.get(), action_set)
