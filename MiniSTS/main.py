@@ -12,7 +12,7 @@ from ggpa.always_attack import AlwaysAttackBot
 from ggpa.rl_algos.training_logger import TrainingLogger
 
 import torch
-
+from tqdm import tqdm
 
 def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleState):
     '''
@@ -87,11 +87,11 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
 
 
 def main():
-    #agent = DQNBot()
+    agent = DQNBot()
     # agent = AlwaysAttackBot()
     # agent = BacktrackBot(4, False)
     # agent = RandomBot()
-    agent = HumanInput(True) 
+    #agent = HumanInput(True) 
     # more episodes when gpu is available since training is faster
     num_episodes = 50
     if torch.cuda.is_available() or torch.backends.mps.is_available():
@@ -99,45 +99,57 @@ def main():
 
     # training logger -- only used for dqn, saves to training_log.json
     logger = TrainingLogger(log_path='training_log.json', save_every=10) if isinstance(agent, DQNBot) else None
+    
     # first battle is baseline jawworm 
     # then high health enemy where you should wait to attack when the time is right 
     # then two enemies that shows target prioritization 
     #then miniboss cultist where you have to kill as quick as possible 
     battles = [JawWorm, SwampLeech]
-    for i_episode in range(num_episodes):
-        # create game state ONCE per episode -- player HP carries over between fights
+    pbar = tqdm(range(num_episodes), desc="Training", unit="ep")
+    for i_episode in pbar:
         game_state = GameState(Character.IRON_CLAD, agent, 0)
         game_state.set_deck(*CardRepo.get_scenario_0()[1])
         
         episode_reward = 0.0
         episode_won_all = True
+        final_hp = game_state.player.health  # default if first fight is lost immediately
+        total_steps = 0
 
         for battle in battles:
             start = time.time()
-
             if isinstance(agent, DQNBot):
                 battle_state = BattleState(game_state, battle(game_state), verbose=Verbose.NO_LOG)
                 battle_reward, win, final_hp, steps = run_dqn_episode(agent, game_state, battle_state)
                 episode_reward += battle_reward
+                total_steps += steps
 
                 if not win:
                     episode_won_all = False
-                    break  # player died, skip remaining fights
+                    break
 
-                # burning blood -- heal 6 hp after each won fight, capped at max
                 game_state.player.health = min(game_state.player.health + 6, game_state.player.max_health)
 
             else:
                 battle_state = BattleState(game_state, battle(game_state), verbose=Verbose.LOG)
                 battle_state.run()
-                end = time.time()
-                print(f"run ended in {end - start:.2f} seconds")
+                print(f"run ended in {time.time() - start:.2f} seconds")
 
                 if not battle_state.get_end_result() == 1:
-                    break  # player died, skip remaining fights
+                    break
 
                 game_state.player.health = min(game_state.player.health + 6, game_state.player.max_health)
 
+        # log episode AFTER all fights complete
+        if isinstance(agent, DQNBot):
+            logger.log_episode(episode_reward, episode_won_all, final_hp, total_steps)
+
+            recent_wins = logger.episode_wins[-20:] if len(logger.episode_wins) >= 20 else logger.episode_wins
+            win_rate = sum(recent_wins) / len(recent_wins) if recent_wins else 0
+            pbar.set_postfix({
+                'win%': f'{win_rate:.0%}',
+                'hp': final_hp,
+                'reward': f'{episode_reward:.2f}',
+            })
     
     
     # save final training log

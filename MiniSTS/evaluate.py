@@ -1,19 +1,21 @@
 '''
 evaluate.py -- D.E.F.E.C.T. agent evaluation suite
 
-runs all agents against the same seeded scenarios and saves
+runs all agents against the same seeded multi-fight scenarios and saves
 results to eval_results.json for visualization.
 
 usage:
-    python3.11 evaluate.py                        # evaluate all agents
+    python3.11 evaluate.py                        # evaluate all agents, full battle suite
     python3.11 evaluate.py --agent dqn            # evaluate only dqn
     python3.11 evaluate.py --agent llm            # evaluate llm (requires OPENAI_API_KEY)
-    python3.11 evaluate.py --episodes 200         # run 200 eval episodes
+    python3.11 evaluate.py --episodes 50          # run 50 eval episodes
+    python3.11 evaluate.py --battles single       # jawworm only (faster, for llm)
 
 llm agent setup:
     export OPENAI_API_KEY="your-key-here"
-    python3.11 evaluate.py --agent llm
-    get a key at platform.openai.com -- ~50 episodes costs very little
+    python3.11 evaluate.py --agent llm --battles single
+    note: multi-fight llm evaluation is slow (~1s per card choice, many more turns)
+    recommend --battles single for llm to match the original paper setup
 '''
 
 import json
@@ -27,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from game import GameState
 from battle import BattleState
 from config import Character, Verbose
-from agent import JawWorm
+from agent import JawWorm, SwampLeech
 from card import CardRepo
 
 from ggpa.random_bot import RandomBot
@@ -50,7 +52,6 @@ try:
 except ImportError:
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', None)
 
-
 # fixed seeds for reproducible evaluation -- all agents face identical scenarios
 EVAL_SEEDS = [42, 123, 456, 789, 1000, 1337, 2024, 3141, 9999, 12345,
               111, 222, 333, 444, 555, 666, 777, 888, 999, 1111,
@@ -58,45 +59,93 @@ EVAL_SEEDS = [42, 123, 456, 789, 1000, 1337, 2024, 3141, 9999, 12345,
               11, 22, 33, 44, 55, 66, 77, 88, 99, 100,
               200, 300, 400, 500, 600, 700, 800, 900, 1500, 2500]
 
+# battle suites -- mirrors main.py
+# add new enemies here as the benchmark grows
+BATTLE_SUITES = {
+    'single': [JawWorm],
+    'two':    [JawWorm, SwampLeech],
+    # 'three': [JawWorm, SwampLeech, TwoEnemyFight],
+    # 'four':  [JawWorm, SwampLeech, TwoEnemyFight, Cultist],
+}
 
-def run_episode(agent, seed: int) -> dict:
+BURNING_BLOOD_HEAL = 6  # ironclad starting relic
+
+
+def run_episode(agent, seed: int, battles: list) -> dict:
     '''
-    run one evaluation episode with a fixed seed.
+    run one full multi-fight evaluation episode with a fixed seed.
+    hp carries over between fights. burning blood heals 6 after each won fight.
     returns a dict of metrics for this episode.
     '''
     random.seed(seed)
 
     game_state = GameState(Character.IRON_CLAD, agent, 0)
     game_state.set_deck(*CardRepo.get_scenario_0()[1])
-    battle_state = BattleState(game_state, JawWorm(game_state), verbose=Verbose.NO_LOG)
 
-    prev_hp = battle_state.player.max_health
+    total_steps = 0
+    total_damage_taken = 0
+    fights_won = 0
+    per_fight_hp = []
 
-    battle_state.initiate_log()
+    for fight_idx, battle_class in enumerate(battles):
+        hp_before = game_state.player.health
+        battle_state = BattleState(game_state, battle_class(game_state), verbose=Verbose.NO_LOG)
+        battle_state.initiate_log()
 
-    # use tick_player loop for consistent per-step tracking across all agents
-    steps = 0
-    while not battle_state.ended():
-        action = agent.choose_card(game_state, battle_state)
-        battle_state.tick_player(action)
-        steps += 1
+        steps = 0
+        while not battle_state.ended():
+            action = agent.choose_card(game_state, battle_state)
+            battle_state.tick_player(action)
+            steps += 1
 
-    result = battle_state.get_end_result()
-    final_hp = battle_state.player.health
-    max_hp = battle_state.player.max_health
+        total_steps += steps
+        result = battle_state.get_end_result()
+        final_hp = game_state.player.health
+        per_fight_hp.append(final_hp)
+        total_damage_taken += hp_before - final_hp
 
+        if result != 1:
+            # player died -- record loss and stop
+            return {
+                'win': 0,
+                'fights_won': fights_won,
+                'fights_total': len(battles),
+                'final_hp': 0,
+                'max_hp': game_state.player.max_health,
+                'hp_ratio': 0.0,
+                'damage_taken': total_damage_taken,
+                'turns': total_steps,
+                'per_fight_hp': per_fight_hp,
+                'seed': seed,
+            }
+
+        fights_won += 1
+
+        # burning blood -- heal 6 hp between fights
+        if fight_idx < len(battles) - 1:
+            game_state.player.health = min(
+                game_state.player.health + BURNING_BLOOD_HEAL,
+                game_state.player.max_health
+            )
+
+    # cleared all fights
+    max_hp = game_state.player.max_health
     return {
-        'win': 1 if result == 1 else 0,
-        'final_hp': final_hp,
+        'win': 1,
+        'fights_won': fights_won,
+        'fights_total': len(battles),
+        'final_hp': game_state.player.health,
         'max_hp': max_hp,
-        'hp_ratio': final_hp / max_hp,
-        'damage_taken': max_hp - final_hp,
-        'turns': steps,
+        'hp_ratio': game_state.player.health / max_hp,
+        'damage_taken': total_damage_taken,
+        'turns': total_steps,
+        'per_fight_hp': per_fight_hp,
         'seed': seed,
     }
 
 
-def evaluate_agent(agent, agent_name: str, seeds: list, verbose: bool = True) -> dict:
+def evaluate_agent(agent, agent_name: str, seeds: list, battles: list,
+                   verbose: bool = True) -> dict:
     '''
     run evaluation episodes for one agent across all seeds.
     returns aggregated results dict.
@@ -105,13 +154,14 @@ def evaluate_agent(agent, agent_name: str, seeds: list, verbose: bool = True) ->
     wins = 0
 
     if verbose:
-        print(f'\nevaluating {agent_name} over {len(seeds)} episodes...')
+        suite_names = [b.__name__ for b in battles]
+        print(f'\nevaluating {agent_name} over {len(seeds)} episodes '
+              f'({" → ".join(suite_names)})...')
 
     for i, seed in enumerate(seeds):
         try:
-            result = run_episode(agent, seed)
+            result = run_episode(agent, seed, battles)
         except Exception as e:
-            # llm agent can fail on api errors -- log and skip
             print(f'  episode {i + 1} failed ({e}), skipping')
             continue
 
@@ -132,35 +182,34 @@ def evaluate_agent(agent, agent_name: str, seeds: list, verbose: bool = True) ->
     avg_hp_ratio = sum(e['hp_ratio'] for e in episodes) / n
     avg_damage = sum(e['damage_taken'] for e in episodes) / n
     avg_turns = sum(e['turns'] for e in episodes) / n
+    avg_fights_won = sum(e['fights_won'] for e in episodes) / n
 
     winning_eps = [e for e in episodes if e['win'] == 1]
     avg_hp_when_winning = (sum(e['final_hp'] for e in winning_eps) / len(winning_eps)
                            if winning_eps else 0)
 
     if verbose:
-        print(f'  results: win rate={win_rate:.1%} | '
-              f'avg hp={avg_hp:.1f} | avg damage={avg_damage:.1f} | '
-              f'avg turns={avg_turns:.1f}')
+        print(f'  results: win rate={win_rate:.1%} | avg hp={avg_hp:.1f} | '
+              f'avg damage={avg_damage:.1f} | avg turns={avg_turns:.1f} | '
+              f'avg fights won={avg_fights_won:.1f}/{len(battles)}')
 
     return {
         'agent': agent_name,
         'n_episodes': n,
+        'n_fights': len(battles),
         'win_rate': win_rate,
         'wins': wins,
         'avg_final_hp': avg_hp,
         'avg_hp_ratio': avg_hp_ratio,
         'avg_damage_taken': avg_damage,
         'avg_turns': avg_turns,
+        'avg_fights_won': avg_fights_won,
         'avg_hp_when_winning': avg_hp_when_winning,
         'episodes': episodes,
     }
 
 
 def build_agents(args) -> list:
-    '''
-    build list of (name, agent) tuples based on args.
-    llm agents are only included if api key is available.
-    '''
     agents = []
 
     if args.agent in ('all', 'random'):
@@ -173,9 +222,7 @@ def build_agents(args) -> list:
         agents.append(('Backtrack (depth 3)', BacktrackBot(3, False)))
 
     if args.agent in ('all', 'dqn'):
-        dqn_agent = DQNBot(eval_mode=True)
-        
-        agents.append(('DQN', dqn_agent))
+        agents.append(('DQN', DQNBot(eval_mode=True)))
 
     if args.agent in ('all', 'llm', 'llm_cot'):
         if not LLM_AVAILABLE:
@@ -183,31 +230,13 @@ def build_agents(args) -> list:
         elif not OPENAI_API_KEY:
             print('warning: llm agent skipped -- set OPENAI_API_KEY to include it')
             print('         export OPENAI_API_KEY="your-key-here"')
-            print('         get a key at platform.openai.com')
         else:
             if args.agent in ('all', 'llm'):
-                # plain llm without chain of thought -- matches llm paper baseline
-                # uses gpt-3.5-turbo -- same model as the original paper
-                llm_agent = ChatGPTBot(
-                    ChatGPTBot.ModelName.GPT_Turbo_35,
-                    PromptOption.NONE,
-                    0,      # history window (0 = stateless, best per llm paper)
-                    False,  # no option outcomes
-                    1       # num retries on invalid response
-                )
-                agents.append(('LLM', llm_agent))
-
+                agents.append(('LLM', ChatGPTBot(
+                    ChatGPTBot.ModelName.GPT_Turbo_35, PromptOption.NONE, 0, False, 1)))
             if args.agent in ('all', 'llm_cot'):
-                # llm with chain of thought -- best llm variant from the paper
-                # uses gpt-3.5-turbo -- same model as the original paper
-                llm_cot_agent = ChatGPTBot(
-                    ChatGPTBot.ModelName.GPT_Turbo_35,
-                    PromptOption.CoT,
-                    0,
-                    False,
-                    1
-                )
-                agents.append(('LLM CoT', llm_cot_agent))
+                agents.append(('LLM CoT', ChatGPTBot(
+                    ChatGPTBot.ModelName.GPT_Turbo_35, PromptOption.CoT, 0, False, 1)))
 
     return agents
 
@@ -220,19 +249,27 @@ def main():
                         help='which agent to evaluate (default: all)')
     parser.add_argument('--episodes', type=int, default=50,
                         help='number of evaluation episodes (default: 50)')
+    parser.add_argument('--battles', type=str, default='two',
+                        choices=list(BATTLE_SUITES.keys()),
+                        help='battle suite to run (default: two)')
     parser.add_argument('--output', type=str, default='eval_results.json',
                         help='output file for results (default: eval_results.json)')
     args = parser.parse_args()
 
     seeds = EVAL_SEEDS[:args.episodes]
+    battles = BATTLE_SUITES[args.battles]
 
-    # always start fresh -- delete existing results if present
+    # warn about llm speed on multi-fight suites
+    if args.battles != 'single' and args.agent in ('all', 'llm', 'llm_cot'):
+        print(f'note: llm evaluation on {args.battles} suite will be slow (~1s per card '
+              f'choice x many turns x {len(battles)} fights x {args.episodes} episodes)')
+        print('      consider --battles single to match the original paper setup')
+
     if os.path.exists(args.output):
         os.remove(args.output)
         print(f'removed existing {args.output} -- starting fresh')
 
     results = {}
-
     agents_to_run = build_agents(args)
     if not agents_to_run:
         print('no agents to evaluate.')
@@ -240,24 +277,25 @@ def main():
 
     start = time.time()
     for agent_name, agent in agents_to_run:
-        agent_results = evaluate_agent(agent, agent_name, seeds, verbose=True)
+        agent_results = evaluate_agent(agent, agent_name, seeds, battles, verbose=True)
         if agent_results:
             results[agent_name] = agent_results
 
-    # save results
     with open(args.output, 'w') as f:
         json.dump(results, f, indent=2)
 
     elapsed = time.time() - start
     print(f'\nresults saved to {args.output} ({elapsed:.1f}s)')
-    print(f'\nsummary:')
-    print(f'{"agent":<25} {"win rate":>10} {"avg hp":>10} {"avg dmg":>10} {"avg turns":>10}')
-    print('-' * 65)
+    print(f'\nbattle suite: {args.battles} ({" → ".join(b.__name__ for b in battles)})')
+    print(f'{"agent":<25} {"win rate":>10} {"avg hp":>10} {"avg dmg":>10} '
+          f'{"avg turns":>10} {"fights won":>12}')
+    print('-' * 72)
     for name, r in results.items():
         print(f'{name:<25} {r["win_rate"]:>10.1%} '
               f'{r["avg_final_hp"]:>10.1f} '
               f'{r["avg_damage_taken"]:>10.1f} '
-              f'{r["avg_turns"]:>10.1f}')
+              f'{r["avg_turns"]:>10.1f} '
+              f'{r["avg_fights_won"]:>10.1f}/{r["n_fights"]}')
 
 
 if __name__ == '__main__':
