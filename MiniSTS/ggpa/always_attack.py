@@ -1,4 +1,4 @@
-#this agent always uses highest value attack on the enemy 
+#this agent always uses highest value attack on the enemy on the lowest health enemy 
 
 from __future__ import annotations
 import random
@@ -51,8 +51,10 @@ class AlwaysAttackBot(GGPA):
         return best_attack
     
     
-    def choose_agent_target(self, battle_state: BattleState, list_name: str, agent_list: list[Agent]) -> Agent:
-        return random.choice(agent_list)
+    def choose_agent_target(self, battle_state: BattleState, list_name: str, 
+                        agent_list: list[Agent]) -> Agent:
+        # focus fire -- lowest hp enemy dies first, removing a damage source
+        return min(agent_list, key=lambda e: e.health)
     
     def choose_card_target(self, battle_state: BattleState, list_name: str, card_list: list[Card]) -> Card:
         return random.choice(card_list)

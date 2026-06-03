@@ -11,7 +11,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-
+import os 
 
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -211,23 +211,85 @@ def optimize_model():
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
     
+
+# target selection network -- input is state + card one-hot context
+N_ENEMIES = 5
+TARGET_INPUT_DIMS = n_observations + N_ACTIONS  # 266 + 11 = 277
+
+target_policy_net = DQN(TARGET_INPUT_DIMS, N_ENEMIES).to(device)
+target_target_net = DQN(TARGET_INPUT_DIMS, N_ENEMIES).to(device)
+target_target_net.load_state_dict(target_policy_net.state_dict())
+target_optimizer = optim.AdamW(target_policy_net.parameters(), lr=LR, amsgrad=True)
+target_memory_buffer = ReplayMemory(50000)
+
+def build_target_state(state: torch.Tensor, card_action: int) -> torch.Tensor:
+    '''concatenate state with one-hot card encoding to form target network input'''
+    card_one_hot = torch.zeros(N_ACTIONS, device=device)
+    card_one_hot[card_action] = 1.0
+    return torch.cat([state, card_one_hot.unsqueeze(0)], dim=1)  # (1, 277)
+
+def select_target(target_state: torch.Tensor, enemy_mask: torch.Tensor) -> torch.Tensor:
+    '''epsilon-greedy target selection -- no separate epsilon, shares card epsilon'''
+    with torch.no_grad():
+        q_values = target_policy_net(target_state)
+        q_values[0][enemy_mask == 0] = float('-inf')
+        return q_values.max(1).indices.view(1, 1)
+
+def optimize_target_model():
+    if len(target_memory_buffer) < BATCH_SIZE:
+        return
+    transitions = target_memory_buffer.sample(BATCH_SIZE)
+    batch = Transition(*zip(*transitions))
+
+    non_final_mask = torch.tensor(tuple(map(lambda s: s is not None, batch.next_state)),
+                                  device=device, dtype=torch.bool)
+    non_final_next_states = torch.cat([s for s in batch.next_state if s is not None])
+
+    state_batch = torch.cat(batch.state)
+    action_batch = torch.cat(batch.action)
+    reward_batch = torch.cat(batch.reward)
+
+    state_action_values = target_policy_net(state_batch).gather(1, action_batch)
+
+    next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    with torch.no_grad():
+        next_q = target_target_net(non_final_next_states)
+        next_masks = torch.stack([m for m, s in zip(batch.next_mask, batch.next_state)
+                                  if s is not None])
+        next_q[next_masks == 0] = float('-inf')
+        next_state_values[non_final_mask] = next_q.max(1).values
+
+    expected = (next_state_values * GAMMA) + reward_batch
+    loss = nn.SmoothL1Loss()(state_action_values, expected.unsqueeze(1))
+
+    target_optimizer.zero_grad()
+    loss.backward()
+    torch.nn.utils.clip_grad_value_(target_policy_net.parameters(), 100)
+    target_optimizer.step()
+
 # add to the bottom of dqn.py
 def save_model(path: str = 'dqn_model.pt'):
     torch.save({
         'policy_net': policy_net.state_dict(),
         'target_net': target_net.state_dict(),
+        'target_policy_net': target_policy_net.state_dict(),
+        'target_target_net': target_target_net.state_dict(),
         'steps_done': steps_done,
     }, path)
     print(f'model saved to {path}')
 
 def load_model(path: str = 'dqn_model.pt'):
     global steps_done
-    if not torch.os.path.exists(path):
+    if not os.path.exists(path):
         print(f'no model found at {path} -- using random weights')
         return False
     checkpoint = torch.load(path, map_location=device)
     policy_net.load_state_dict(checkpoint['policy_net'])
     target_net.load_state_dict(checkpoint['target_net'])
+    # target networks may not exist in older checkpoints
+    if 'target_policy_net' in checkpoint:
+        target_policy_net.load_state_dict(checkpoint['target_policy_net'])
+        target_target_net.load_state_dict(checkpoint['target_target_net'])
     steps_done = checkpoint['steps_done']
     print(f'model loaded from {path} (steps_done={steps_done})')
     return True

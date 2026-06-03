@@ -31,6 +31,7 @@ class DQNBot(GGPA):
         self.current_mask = None
         self.current_action = None
         self.eval_mode = eval_mode
+        self.pending_target = None  # stores target transition until reward is known
 
         # load trained weights when in eval mode
         if eval_mode:
@@ -345,11 +346,50 @@ class DQNBot(GGPA):
         # fallback -- if selected index has no valid play, end turn
         return next(o for o in options if type(o) is EndAgentTurn)
  
-    def choose_agent_target(self, battle_state: 'BattleState', list_name: str, agent_list: list['Agent']) -> 'Agent':
-        # for now pick randomly -- target selection will be improved when
-        # multi-target autoregressive selection is added in a later phase
-        return random.choice(agent_list)
  
+    def choose_agent_target(self, battle_state: 'BattleState', list_name: str,
+                        agent_list: list['Agent']) -> 'Agent':
+        # no valid targets -- shouldn't happen but clear pending and return early
+        if not agent_list:
+            self.pending_target = None
+            return None
+
+        # single enemy -- no inference needed, return directly
+        if len(agent_list) == 1:
+            self.pending_target = None  # no target decision was made, nothing to store
+            return agent_list[0]
+
+        # build enemy mask over all 5 slots
+        # only mark slots whose enemy is in agent_list as valid targets
+        enemy_mask = torch.zeros(dqn.N_ENEMIES, device=dqn.device)
+        for slot_idx, enemy in enumerate(battle_state.enemies):
+            if enemy in agent_list and not enemy.is_dead():
+                enemy_mask[slot_idx] = 1.0
+
+        # build 277-dim context: state + one-hot of which card was just chosen
+        target_state = dqn.build_target_state(self.current_state, self.current_action)
+
+        # select target via target network
+        chosen_slot = dqn.select_target(target_state, enemy_mask).item()
+
+        # store pending transition -- reward filled in by training loop after tick_player
+        self.pending_target = {
+            'target_state': target_state,
+            'action': torch.tensor([[chosen_slot]], device=dqn.device),
+            'enemy_mask': enemy_mask,
+        }
+
+        # return the actual enemy object at the chosen slot
+        # fall back to first valid target if slot is somehow invalid
+        if chosen_slot < len(battle_state.enemies) and not battle_state.enemies[chosen_slot].is_dead():
+            chosen_enemy = battle_state.enemies[chosen_slot]
+            if chosen_enemy in agent_list:
+                return chosen_enemy
+
+        return agent_list[0]
+ 
+
+    #for now still random since ironclad doesn't have any cardtargeting cards 
     def choose_card_target(self, battle_state: 'BattleState', list_name: str, card_list: list['Card']) -> 'Card':
         return random.choice(card_list)
  

@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from game import GameState
 from battle import BattleState
 from config import Character, Verbose
-from agent import JawWorm, SwampLeech
+from agent import JawWorm, SwampLeech, GoblinFiend, GoblinWizard
 from card import CardRepo
 
 from ggpa.random_bot import RandomBot
@@ -64,7 +64,7 @@ EVAL_SEEDS = [42, 123, 456, 789, 1000, 1337, 2024, 3141, 9999, 12345,
 BATTLE_SUITES = {
     'single': [JawWorm],
     'two':    [JawWorm, SwampLeech],
-    # 'three': [JawWorm, SwampLeech, TwoEnemyFight],
+    'three': [JawWorm, SwampLeech, (GoblinFiend, GoblinWizard)],
     # 'four':  [JawWorm, SwampLeech, TwoEnemyFight, Cultist],
 }
 
@@ -89,7 +89,13 @@ def run_episode(agent, seed: int, battles: list) -> dict:
 
     for fight_idx, battle_class in enumerate(battles):
         hp_before = game_state.player.health
-        battle_state = BattleState(game_state, battle_class(game_state), verbose=Verbose.NO_LOG)
+        # when creating battle state, unpack tuple if multi-enemy
+        if isinstance(battle_class, tuple):
+            enemies = [e(game_state) for e in battle_class]
+        else:
+            enemies = [battle_class(game_state)]
+
+        battle_state = BattleState(game_state, *enemies, verbose=Verbose.NO_LOG)
         battle_state.initiate_log()
 
         steps = 0
@@ -154,7 +160,8 @@ def evaluate_agent(agent, agent_name: str, seeds: list, battles: list,
     wins = 0
 
     if verbose:
-        suite_names = [b.__name__ for b in battles]
+        suite_names = ['+'.join(e.__name__ for e in b) if isinstance(b, tuple) else b.__name__ for b in battles]
+
         print(f'\nevaluating {agent_name} over {len(seeds)} episodes '
               f'({" → ".join(suite_names)})...')
 
@@ -249,9 +256,9 @@ def main():
                         help='which agent to evaluate (default: all)')
     parser.add_argument('--episodes', type=int, default=50,
                         help='number of evaluation episodes (default: 50)')
-    parser.add_argument('--battles', type=str, default='two',
+    parser.add_argument('--battles', type=str, default='three',
                         choices=list(BATTLE_SUITES.keys()),
-                        help='battle suite to run (default: two)')
+                        help='battle suite to run (default: three)')
     parser.add_argument('--output', type=str, default='eval_results.json',
                         help='output file for results (default: eval_results.json)')
     args = parser.parse_args()
@@ -286,7 +293,8 @@ def main():
 
     elapsed = time.time() - start
     print(f'\nresults saved to {args.output} ({elapsed:.1f}s)')
-    print(f'\nbattle suite: {args.battles} ({" → ".join(b.__name__ for b in battles)})')
+    print(f'\nbattle suite: {args.battles} ({" → ".join("+".join(e.__name__ for e in b) if isinstance(b, tuple) else b.__name__ for b in battles)})')
+
     print(f'{"agent":<25} {"win rate":>10} {"avg hp":>10} {"avg dmg":>10} '
           f'{"avg turns":>10} {"fights won":>12}')
     print('-' * 72)

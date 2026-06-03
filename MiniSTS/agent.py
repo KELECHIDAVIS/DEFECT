@@ -154,3 +154,31 @@ class SwampLeech(Enemy):
         rest: Action = NoAction() 
         action_set: ItemSet[Action] = RoundRobin(0, drink, bite, rest )
         super().__init__("SwampLeech", max_health.get(), action_set)
+
+class GoblinFiend(Enemy):
+    def __init__(self, game_state: GameState):
+        max_health = ConstValue(22)
+        # lower HP than Wizard to bait lowest-HP heuristics
+        # damage is moderate but becomes dangerous with Wizard's Vulnerable
+        attack: Action = DealAttackDamage(ConstValue(8)).To(PlayerAgentTarget())
+        heavy_attack: Action = DealAttackDamage(ConstValue(10)).To(PlayerAgentTarget())
+        brace: Action = DealAttackDamage(ConstValue(8)).To(PlayerAgentTarget()).And(
+                         AddBlock(ConstValue(6)).To(SelfAgentTarget()))
+        action_set: ItemSet[Action] = RoundRobin(0, attack, heavy_attack, brace)
+        super().__init__("GoblinFiend", max_health.get(), action_set)
+
+
+class GoblinWizard(Enemy):
+    def __init__(self, game_state: GameState):
+        max_health = ConstValue(35)
+        # hex: weakens player attack output
+        hex_spell: Action = ApplyStatus(ConstValue(1), StatusEffectRepo.WEAK).To(PlayerAgentTarget())
+        # staff strike: direct damage + applies vulnerable
+        # this is the key change -- wizard now threatens directly
+        # with vulnerable active on player, fiend's attacks deal 50% more
+        staff_strike: Action = DealAttackDamage(ConstValue(5)).To(PlayerAgentTarget()).And(
+                                ApplyStatus(ConstValue(1), StatusEffectRepo.VULNERABLE).To(PlayerAgentTarget()))
+        # ward: blocks self every third turn
+        ward: Action = AddBlock(ConstValue(8)).To(SelfAgentTarget())
+        action_set: ItemSet[Action] = RoundRobin(0, hex_spell, staff_strike, ward)
+        super().__init__("GoblinWizard", max_health.get(), action_set)
