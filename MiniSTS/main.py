@@ -1,12 +1,13 @@
 from game import GameState
 from battle import BattleState
 from config import Character, Verbose
-from agent import AcidSlimeSmall, SpikeSlimeSmall, JawWorm
+from agent import SwampLeech,  JawWorm 
 from card import CardGen, CardRepo
 import time
 from ggpa.random_bot import RandomBot
 from ggpa.backtrack import BacktrackBot
 from ggpa.dqn_agent import DQNBot
+from ggpa.human_input import HumanInput
 from ggpa.always_attack import AlwaysAttackBot
 from ggpa.rl_algos.training_logger import TrainingLogger
 
@@ -86,11 +87,11 @@ def run_dqn_episode(agent: DQNBot, game_state: GameState, battle_state: BattleSt
 
 
 def main():
-    agent = DQNBot()
+    #agent = DQNBot()
     # agent = AlwaysAttackBot()
     # agent = BacktrackBot(4, False)
     # agent = RandomBot()
-
+    agent = HumanInput(True) 
     # more episodes when gpu is available since training is faster
     num_episodes = 50
     if torch.cuda.is_available() or torch.backends.mps.is_available():
@@ -98,45 +99,44 @@ def main():
 
     # training logger -- only used for dqn, saves to training_log.json
     logger = TrainingLogger(log_path='training_log.json', save_every=10) if isinstance(agent, DQNBot) else None
-
+    # first battle is baseline jawworm 
+    # then high health enemy where you should wait to attack when the time is right 
+    # then two enemies that shows target prioritization 
+    #then miniboss cultist where you have to kill as quick as possible 
+    battles = [JawWorm, SwampLeech]
     for i_episode in range(num_episodes):
+        # create game state ONCE per episode -- player HP carries over between fights
         game_state = GameState(Character.IRON_CLAD, agent, 0)
         game_state.set_deck(*CardRepo.get_scenario_0()[1])
-        start = time.time()
+        
+        episode_reward = 0.0
+        episode_won_all = True
 
-        # dqn uses tick_player loop for per-step training control
-        # all other agents use run() which handles the full episode automatically
-        if isinstance(agent, DQNBot):
-            battle_state = BattleState(game_state, JawWorm(game_state), verbose=Verbose.NO_LOG)
-            episode_reward, win, final_hp, steps = run_dqn_episode(agent, game_state, battle_state)
+        for battle in battles:
+            start = time.time()
 
-            # log training metrics
-            logger.log_episode(episode_reward, win, final_hp, steps)
+            if isinstance(agent, DQNBot):
+                battle_state = BattleState(game_state, battle(game_state), verbose=Verbose.NO_LOG)
+                battle_reward, win, final_hp, steps = run_dqn_episode(agent, game_state, battle_state)
+                episode_reward += battle_reward
 
-            # print summary every 10 episodes
-            if (i_episode + 1) % 10 == 0:
-                logger.print_summary()
+                if not win:
+                    episode_won_all = False
+                    break  # player died, skip remaining fights
 
-            end = time.time()
-            print(f"episode {i_episode + 1}/{num_episodes}: "
-                  f"{'WIN' if win else 'LOSE'} | "
-                  f"hp: {final_hp}/80 | "
-                  f"reward: {episode_reward:.3f} | "
-                  f"steps: {steps} | "
-                  f"{end - start:.2f}s")
-            
-            # # check convergence every 200 episodes
-            # if (i_episode + 1) % 200 == 0 and len(logger.episode_wins) >= 400:
-            #     recent = sum(logger.episode_wins[-200:]) / 200
-            #     previous = sum(logger.episode_wins[-400:-200]) / 200
-            #     if abs(recent - previous) < 0.02:
-            #         print(f'converged at episode {i_episode + 1}')
-            #         break
-        else:
-            battle_state = BattleState(game_state, JawWorm(game_state), verbose=Verbose.LOG)
-            battle_state.run()
-            end = time.time()
-            print(f"run ended in {end - start:.2f} seconds")
+                # burning blood -- heal 6 hp after each won fight, capped at max
+                game_state.player.health = min(game_state.player.health + 6, game_state.player.max_health)
+
+            else:
+                battle_state = BattleState(game_state, battle(game_state), verbose=Verbose.LOG)
+                battle_state.run()
+                end = time.time()
+                print(f"run ended in {end - start:.2f} seconds")
+
+                if not battle_state.get_end_result() == 1:
+                    break  # player died, skip remaining fights
+
+                game_state.player.health = min(game_state.player.health + 6, game_state.player.max_health)
 
     
     

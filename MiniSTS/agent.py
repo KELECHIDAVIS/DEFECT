@@ -1,5 +1,5 @@
 from __future__ import annotations
-from action.action import Action
+from action.action import Action, NoAction
 from config import Character, MAX_HEALTH
 from value import RandomUniformRange, ConstValue
 from utility import RoundRobin, RoundRobinRandomStart, ItemSet, ItemSequence, RandomizedItemSet, PreventRepeats
@@ -145,3 +145,12 @@ class Leech(Enemy):
         bite: Action = DealAttackDamage(ConstValue(4)).To(PlayerAgentTarget())
         action_set: ItemSet[Action] = RoundRobin(0, drink, bite)
         super().__init__("Leach", max_health.get(), action_set)
+
+class SwampLeech(Enemy):
+    def __init__(self, game_state: GameState):
+        max_health = ConstValue(85)
+        drink: Action = ApplyStatus(ConstValue(2), StatusEffectRepo.WEAK).To(PlayerAgentTarget())
+        bite: Action = DealAttackDamage(ConstValue(15)).To(PlayerAgentTarget())
+        rest: Action = NoAction() 
+        action_set: ItemSet[Action] = RoundRobin(0, drink, bite, rest )
+        super().__init__("SwampLeech", max_health.get(), action_set)
