@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from game import GameState
 from battle import BattleState
 from config import Character, Verbose
-from agent import JawWorm, SwampLeech, GoblinFiend, GoblinWizard
+from agent import JawWorm, SwampLeech, GoblinFiend, GoblinWizard, Cultist
 from card import CardRepo
 
 from ggpa.random_bot import RandomBot
@@ -65,7 +65,7 @@ BATTLE_SUITES = {
     'single': [JawWorm],
     'two':    [JawWorm, SwampLeech],
     'three': [JawWorm, SwampLeech, (GoblinFiend, GoblinWizard)],
-    # 'four':  [JawWorm, SwampLeech, TwoEnemyFight, Cultist],
+    'four':  [JawWorm, SwampLeech, (GoblinFiend, GoblinWizard), Cultist],
 }
 
 BURNING_BLOOD_HEAL = 6  # ironclad starting relic
@@ -256,9 +256,9 @@ def main():
                         help='which agent to evaluate (default: all)')
     parser.add_argument('--episodes', type=int, default=50,
                         help='number of evaluation episodes (default: 50)')
-    parser.add_argument('--battles', type=str, default='three',
+    parser.add_argument('--battles', type=str, default='four',
                         choices=list(BATTLE_SUITES.keys()),
-                        help='battle suite to run (default: three)')
+                        help='battle suite to run (default: four)')
     parser.add_argument('--output', type=str, default='eval_results.json',
                         help='output file for results (default: eval_results.json)')
     args = parser.parse_args()

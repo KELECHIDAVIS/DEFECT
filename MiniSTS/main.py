@@ -1,7 +1,7 @@
 from game import GameState
 from battle import BattleState
 from config import Character, Verbose
-from agent import SwampLeech, JawWorm, GoblinFiend, GoblinWizard
+from agent import SwampLeech, JawWorm, GoblinFiend, GoblinWizard, Cultist
 from card import CardGen, CardRepo
 import time
 from ggpa.random_bot import RandomBot
@@ -140,7 +140,7 @@ def main():
     # fight 3: two enemies (target selection) 
     # fight 4: cultist with ritual (urgency test) -- add when ready
     # main.py and evaluate.py
-    battles = [JawWorm, SwampLeech, (GoblinFiend, GoblinWizard)]
+    battles = [JawWorm, SwampLeech, (GoblinFiend, GoblinWizard), Cultist]
     pbar = tqdm(range(num_episodes), desc="Training", unit="ep")
     for i_episode in pbar:
         # game state created once per episode -- hp carries over between fights
