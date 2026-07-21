@@ -305,7 +305,7 @@ capture. We confirm this hypothesis in Section 4.2 with our multi-encounter
 progressive benchmark."
 
 **For the video:**
-This is the core narrative hook. "Every agent wins every fight. So why does
+This is the core narrative hook. "Every agent wins this fight. So why does
 this number matter?" Point to the damage taken column. Show that in a real
 run these numbers compound. AlwaysAttack burning 25 HP per fight is bleeding
 out over the course of a run while DQN is conserving resources. The single
