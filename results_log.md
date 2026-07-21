@@ -192,7 +192,7 @@ differentiate learned policies from heuristics, motivating our multi-encounter
 progressive benchmark in which health conservation across sequential fights
 creates meaningful performance separation."
 
-This is your core motivation for the three-fight benchmark and it is now
+This is your core motivation for the four-fight benchmark and it is now
 supported by a complete 6-agent comparison table.
 
 ---
