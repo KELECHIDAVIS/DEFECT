@@ -113,7 +113,7 @@ future work. The benchmark contribution stands regardless.
 
 *LLM CoT not included in this run (API credits). Prior run: 100%, 52.9 avg hp, 17.2 turns.*
 
-Reference (LLM paper, same environment):
+Reference (In the llm paper, they had different card mechanics (I think it was only 3 cards in a hand have to confirm in the future)):
 - Backtrack depth 3: avg hp 25.94
 - LLM CoT: avg hp 23.36
 
