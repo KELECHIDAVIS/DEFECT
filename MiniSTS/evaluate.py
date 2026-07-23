@@ -36,6 +36,7 @@ from ggpa.random_bot import RandomBot
 from ggpa.backtrack import BacktrackBot
 from ggpa.always_attack import AlwaysAttackBot
 from ggpa.dqn_agent import DQNBot
+from ggpa.ppo_agent import PPOBot
 
 # llm agent requires openai api key -- import conditionally
 try:
@@ -231,6 +232,9 @@ def build_agents(args) -> list:
     if args.agent in ('all', 'dqn'):
         agents.append(('DQN', DQNBot(eval_mode=True)))
 
+    if args.agent in ('all', 'ppo'):
+        agents.append(('PPO', PPOBot(eval_mode=True)))
+
     if args.agent in ('all', 'llm', 'llm_cot'):
         if not LLM_AVAILABLE:
             print('warning: llm agent unavailable -- chatgpt_bot import failed')
@@ -251,7 +255,7 @@ def build_agents(args) -> list:
 def main():
     parser = argparse.ArgumentParser(description='D.E.F.E.C.T. agent evaluation suite')
     parser.add_argument('--agent', type=str, default='all',
-                        choices=['all', 'dqn', 'random', 'always_attack',
+                        choices=['all', 'dqn', 'ppo', 'random', 'always_attack',
                                  'backtrack', 'llm', 'llm_cot'],
                         help='which agent to evaluate (default: all)')
     parser.add_argument('--episodes', type=int, default=50,
@@ -263,7 +267,21 @@ def main():
                         help='output file for results (default: eval_results.json)')
     args = parser.parse_args()
 
-    seeds = EVAL_SEEDS[:args.episodes]
+    if args.episodes <= len(EVAL_SEEDS):
+        seeds = EVAL_SEEDS[:args.episodes]
+    else:
+        # extend deterministically past the hand-picked 50 --
+        # same episode count always produces the same seed list on any machine.
+        # skip collisions so no scenario is double-counted.
+        rng = random.Random(2026)
+        seen = set(EVAL_SEEDS)
+        extra = []
+        while len(extra) < args.episodes - len(EVAL_SEEDS):
+            s = rng.randint(10_000, 1_000_000)
+            if s not in seen:
+                seen.add(s)
+                extra.append(s)
+        seeds = EVAL_SEEDS + extra
     battles = BATTLE_SUITES[args.battles]
 
     # warn about llm speed on multi-fight suites

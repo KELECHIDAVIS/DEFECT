@@ -29,6 +29,7 @@ AGENT_COLORS = {
     'AlwaysAttack':       '#e74c3c',   # red
     'Backtrack (depth 3)':'#f39c12',   # amber
     'DQN':                '#00d4ff',   # cyan
+    'PPO':                '#ff6ec7',   # pink
     'LLM':                '#9b59b6',   # purple
     'LLM CoT':            '#2ecc71',   # green
 }
