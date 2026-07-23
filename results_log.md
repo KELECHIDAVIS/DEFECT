@@ -110,8 +110,8 @@ future work. The benchmark contribution stands regardless.
 | Backtrack (depth 3) | 100.0% | 53.6 | 26.4 | 12.1 | 53.6 |
 | **DQN** | **100.0%** | **58.4** | **21.6** | **10.6** | **58.4** |
 | LLM | 100.0% | 51.6 | 28.4 | 16.1 | 51.6 |
+| LLM CoT | 100.0% | 52.9 | 27.1 | 17.2 | 52.9 |
 
-*LLM CoT not included in this run (API credits). Prior run: 100%, 52.9 avg hp, 17.2 turns.*
 
 Reference (In the llm paper, they had different card mechanics (I think it was only 3 cards in a hand have to confirm in the future)):
 - Backtrack depth 3: avg hp 25.94
