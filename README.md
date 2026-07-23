@@ -280,7 +280,6 @@ state encoding, and add a dedicated training script.
 ## reference docs
 
 - `state_vectors_reference.txt` -- full 266-dim state tensor specification
-- `D_E_F_E_C_T_Design_Reference_Doc.docx` -- full project design, research question, publication plan
 - [MiniSTS repo](https://github.com/iambb5445/MiniSTS) -- environment documentation
 - [pytorch dqn tutorial](https://docs.pytorch.org/tutorials/intermediate/reinforcement_q_learning.html) -- dqn implementation reference
 - [cleanrl](https://github.com/vwxyzjn/cleanrl) -- clean ppo/dqn reference implementations
