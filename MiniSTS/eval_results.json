@@ -1,0 +1,867 @@
+{
+  "PPO": {
+    "agent": "PPO",
+    "n_episodes": 50,
+    "n_fights": 4,
+    "win_rate": 0.98,
+    "wins": 49,
+    "avg_final_hp": 12.4,
+    "avg_hp_ratio": 0.155,
+    "avg_damage_taken": 85.6,
+    "avg_turns": 59.12,
+    "avg_fights_won": 3.98,
+    "avg_hp_when_winning": 12.653061224489797,
+    "episodes": [
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 18,
+        "max_hp": 80,
+        "hp_ratio": 0.225,
+        "damage_taken": 80,
+        "turns": 61,
+        "per_fight_hp": [
+          59,
+          40,
+          18,
+          18
+        ],
+        "seed": 42
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 21,
+        "max_hp": 80,
+        "hp_ratio": 0.2625,
+        "damage_taken": 77,
+        "turns": 64,
+        "per_fight_hp": [
+          59,
+          40,
+          23,
+          21
+        ],
+        "seed": 123
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 1,
+        "max_hp": 80,
+        "hp_ratio": 0.0125,
+        "damage_taken": 97,
+        "turns": 58,
+        "per_fight_hp": [
+          45,
+          21,
+          4,
+          1
+        ],
+        "seed": 456
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 6,
+        "max_hp": 80,
+        "hp_ratio": 0.075,
+        "damage_taken": 92,
+        "turns": 58,
+        "per_fight_hp": [
+          55,
+          31,
+          9,
+          6
+        ],
+        "seed": 789
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 9,
+        "max_hp": 80,
+        "hp_ratio": 0.1125,
+        "damage_taken": 89,
+        "turns": 59,
+        "per_fight_hp": [
+          53,
+          29,
+          12,
+          9
+        ],
+        "seed": 1000
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 25,
+        "max_hp": 80,
+        "hp_ratio": 0.3125,
+        "damage_taken": 73,
+        "turns": 59,
+        "per_fight_hp": [
+          59,
+          45,
+          23,
+          25
+        ],
+        "seed": 1337
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 13,
+        "max_hp": 80,
+        "hp_ratio": 0.1625,
+        "damage_taken": 85,
+        "turns": 58,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          13
+        ],
+        "seed": 2024
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 16,
+        "max_hp": 80,
+        "hp_ratio": 0.2,
+        "damage_taken": 82,
+        "turns": 63,
+        "per_fight_hp": [
+          55,
+          41,
+          19,
+          16
+        ],
+        "seed": 3141
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 10,
+        "max_hp": 80,
+        "hp_ratio": 0.125,
+        "damage_taken": 88,
+        "turns": 66,
+        "per_fight_hp": [
+          62,
+          38,
+          13,
+          10
+        ],
+        "seed": 9999
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 10,
+        "max_hp": 80,
+        "hp_ratio": 0.125,
+        "damage_taken": 88,
+        "turns": 57,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          10
+        ],
+        "seed": 12345
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 13,
+        "max_hp": 80,
+        "hp_ratio": 0.1625,
+        "damage_taken": 85,
+        "turns": 66,
+        "per_fight_hp": [
+          62,
+          43,
+          18,
+          13
+        ],
+        "seed": 111
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 5,
+        "max_hp": 80,
+        "hp_ratio": 0.0625,
+        "damage_taken": 93,
+        "turns": 61,
+        "per_fight_hp": [
+          51,
+          27,
+          5,
+          5
+        ],
+        "seed": 222
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 19,
+        "max_hp": 80,
+        "hp_ratio": 0.2375,
+        "damage_taken": 79,
+        "turns": 60,
+        "per_fight_hp": [
+          55,
+          36,
+          19,
+          19
+        ],
+        "seed": 333
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 8,
+        "max_hp": 80,
+        "hp_ratio": 0.1,
+        "damage_taken": 90,
+        "turns": 59,
+        "per_fight_hp": [
+          52,
+          28,
+          6,
+          8
+        ],
+        "seed": 444
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 15,
+        "max_hp": 80,
+        "hp_ratio": 0.1875,
+        "damage_taken": 83,
+        "turns": 55,
+        "per_fight_hp": [
+          59,
+          40,
+          18,
+          15
+        ],
+        "seed": 555
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 15,
+        "max_hp": 80,
+        "hp_ratio": 0.1875,
+        "damage_taken": 83,
+        "turns": 61,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          15
+        ],
+        "seed": 666
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 2,
+        "max_hp": 80,
+        "hp_ratio": 0.025,
+        "damage_taken": 96,
+        "turns": 55,
+        "per_fight_hp": [
+          51,
+          27,
+          5,
+          2
+        ],
+        "seed": 777
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 10,
+        "max_hp": 80,
+        "hp_ratio": 0.125,
+        "damage_taken": 88,
+        "turns": 61,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          10
+        ],
+        "seed": 888
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 11,
+        "max_hp": 80,
+        "hp_ratio": 0.1375,
+        "damage_taken": 87,
+        "turns": 59,
+        "per_fight_hp": [
+          55,
+          36,
+          14,
+          11
+        ],
+        "seed": 999
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 18,
+        "max_hp": 80,
+        "hp_ratio": 0.225,
+        "damage_taken": 80,
+        "turns": 56,
+        "per_fight_hp": [
+          62,
+          43,
+          21,
+          18
+        ],
+        "seed": 1111
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 15,
+        "max_hp": 80,
+        "hp_ratio": 0.1875,
+        "damage_taken": 83,
+        "turns": 59,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          15
+        ],
+        "seed": 2222
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 13,
+        "max_hp": 80,
+        "hp_ratio": 0.1625,
+        "damage_taken": 85,
+        "turns": 55,
+        "per_fight_hp": [
+          62,
+          38,
+          16,
+          13
+        ],
+        "seed": 3333
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 19,
+        "max_hp": 80,
+        "hp_ratio": 0.2375,
+        "damage_taken": 79,
+        "turns": 59,
+        "per_fight_hp": [
+          62,
+          43,
+          26,
+          19
+        ],
+        "seed": 4444
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 10,
+        "max_hp": 80,
+        "hp_ratio": 0.125,
+        "damage_taken": 88,
+        "turns": 62,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          10
+        ],
+        "seed": 5555
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 9,
+        "max_hp": 80,
+        "hp_ratio": 0.1125,
+        "damage_taken": 89,
+        "turns": 59,
+        "per_fight_hp": [
+          55,
+          31,
+          14,
+          9
+        ],
+        "seed": 6666
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 16,
+        "max_hp": 80,
+        "hp_ratio": 0.2,
+        "damage_taken": 82,
+        "turns": 70,
+        "per_fight_hp": [
+          60,
+          41,
+          19,
+          16
+        ],
+        "seed": 7777
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 18,
+        "max_hp": 80,
+        "hp_ratio": 0.225,
+        "damage_taken": 80,
+        "turns": 56,
+        "per_fight_hp": [
+          62,
+          43,
+          21,
+          18
+        ],
+        "seed": 8888
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 6,
+        "max_hp": 80,
+        "hp_ratio": 0.075,
+        "damage_taken": 92,
+        "turns": 57,
+        "per_fight_hp": [
+          55,
+          31,
+          9,
+          6
+        ],
+        "seed": 9876
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 4,
+        "max_hp": 80,
+        "hp_ratio": 0.05,
+        "damage_taken": 94,
+        "turns": 56,
+        "per_fight_hp": [
+          51,
+          27,
+          7,
+          4
+        ],
+        "seed": 5432
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 21,
+        "max_hp": 80,
+        "hp_ratio": 0.2625,
+        "damage_taken": 77,
+        "turns": 56,
+        "per_fight_hp": [
+          60,
+          46,
+          24,
+          21
+        ],
+        "seed": 1234
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 7,
+        "max_hp": 80,
+        "hp_ratio": 0.0875,
+        "damage_taken": 91,
+        "turns": 57,
+        "per_fight_hp": [
+          51,
+          27,
+          10,
+          7
+        ],
+        "seed": 11
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 6,
+        "max_hp": 80,
+        "hp_ratio": 0.075,
+        "damage_taken": 92,
+        "turns": 55,
+        "per_fight_hp": [
+          55,
+          31,
+          9,
+          6
+        ],
+        "seed": 22
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 18,
+        "max_hp": 80,
+        "hp_ratio": 0.225,
+        "damage_taken": 80,
+        "turns": 57,
+        "per_fight_hp": [
+          67,
+          43,
+          21,
+          18
+        ],
+        "seed": 33
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 23,
+        "max_hp": 80,
+        "hp_ratio": 0.2875,
+        "damage_taken": 75,
+        "turns": 63,
+        "per_fight_hp": [
+          59,
+          45,
+          28,
+          23
+        ],
+        "seed": 44
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 8,
+        "max_hp": 80,
+        "hp_ratio": 0.1,
+        "damage_taken": 90,
+        "turns": 58,
+        "per_fight_hp": [
+          52,
+          28,
+          11,
+          8
+        ],
+        "seed": 55
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 20,
+        "max_hp": 80,
+        "hp_ratio": 0.25,
+        "damage_taken": 78,
+        "turns": 64,
+        "per_fight_hp": [
+          56,
+          42,
+          20,
+          20
+        ],
+        "seed": 66
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 10,
+        "max_hp": 80,
+        "hp_ratio": 0.125,
+        "damage_taken": 88,
+        "turns": 56,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          10
+        ],
+        "seed": 77
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 19,
+        "max_hp": 80,
+        "hp_ratio": 0.2375,
+        "damage_taken": 79,
+        "turns": 56,
+        "per_fight_hp": [
+          55,
+          36,
+          19,
+          19
+        ],
+        "seed": 88
+      },
+      {
+        "win": 0,
+        "fights_won": 3,
+        "fights_total": 4,
+        "final_hp": 0,
+        "max_hp": 80,
+        "hp_ratio": 0.0,
+        "damage_taken": 98,
+        "turns": 60,
+        "per_fight_hp": [
+          49,
+          25,
+          3,
+          0
+        ],
+        "seed": 99
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 18,
+        "max_hp": 80,
+        "hp_ratio": 0.225,
+        "damage_taken": 80,
+        "turns": 59,
+        "per_fight_hp": [
+          62,
+          38,
+          21,
+          18
+        ],
+        "seed": 100
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 13,
+        "max_hp": 80,
+        "hp_ratio": 0.1625,
+        "damage_taken": 85,
+        "turns": 59,
+        "per_fight_hp": [
+          62,
+          38,
+          16,
+          13
+        ],
+        "seed": 200
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 11,
+        "max_hp": 80,
+        "hp_ratio": 0.1375,
+        "damage_taken": 87,
+        "turns": 56,
+        "per_fight_hp": [
+          55,
+          36,
+          14,
+          11
+        ],
+        "seed": 300
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 7,
+        "max_hp": 80,
+        "hp_ratio": 0.0875,
+        "damage_taken": 91,
+        "turns": 58,
+        "per_fight_hp": [
+          60,
+          36,
+          14,
+          7
+        ],
+        "seed": 400
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 25,
+        "max_hp": 80,
+        "hp_ratio": 0.3125,
+        "damage_taken": 73,
+        "turns": 63,
+        "per_fight_hp": [
+          59,
+          40,
+          28,
+          25
+        ],
+        "seed": 500
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 6,
+        "max_hp": 80,
+        "hp_ratio": 0.075,
+        "damage_taken": 92,
+        "turns": 57,
+        "per_fight_hp": [
+          55,
+          31,
+          9,
+          6
+        ],
+        "seed": 600
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 2,
+        "max_hp": 80,
+        "hp_ratio": 0.025,
+        "damage_taken": 96,
+        "turns": 55,
+        "per_fight_hp": [
+          51,
+          27,
+          5,
+          2
+        ],
+        "seed": 700
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 12,
+        "max_hp": 80,
+        "hp_ratio": 0.15,
+        "damage_taken": 86,
+        "turns": 57,
+        "per_fight_hp": [
+          56,
+          32,
+          15,
+          12
+        ],
+        "seed": 800
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 10,
+        "max_hp": 80,
+        "hp_ratio": 0.125,
+        "damage_taken": 88,
+        "turns": 59,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          10
+        ],
+        "seed": 900
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 15,
+        "max_hp": 80,
+        "hp_ratio": 0.1875,
+        "damage_taken": 83,
+        "turns": 65,
+        "per_fight_hp": [
+          59,
+          35,
+          13,
+          15
+        ],
+        "seed": 1500
+      },
+      {
+        "win": 1,
+        "fights_won": 4,
+        "fights_total": 4,
+        "final_hp": 14,
+        "max_hp": 80,
+        "hp_ratio": 0.175,
+        "damage_taken": 84,
+        "turns": 57,
+        "per_fight_hp": [
+          55,
+          36,
+          14,
+          14
+        ],
+        "seed": 2500
+      }
+    ]
+  }
+}
