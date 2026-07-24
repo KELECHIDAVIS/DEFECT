@@ -941,3 +941,177 @@ performance across all metrics with a single forward pass at inference time."
 This is your strongest single paragraph for the paper. It cites the prior authors
 directly, uses their own words to frame the gap, and closes it with your empirical
 result. A reviewer cannot ask "why is this interesting" after reading this.
+
+# PPO evaluation (canonical four-fight benchmark)
+
+
+---
+
+## Finding 21: PPO converges cleanly but plateaus at a lower reward than DQN
+
+Training log block averages over 3000 episodes:
+
+| episodes | win rate | avg HP | avg reward | avg turns |
+|---|---|---|---|---|
+| 0-500 | 61% | 8.6 | 4.01 | 84.5 |
+| 500-1000 | 90% | 12.7 | 5.20 | 72.5 |
+| 1000-1500 | 96% | 12.7 | 5.39 | 64.0 |
+| 1500-2000 | 96% | 12.8 | 5.38 | 62.7 |
+| 2000-2500 | 97% | 13.7 | 5.45 | 62.0 |
+| 2500-3000 | 97% | 13.7 | 5.47 | 61.0 |
+
+PPO reaches 96% win rate by episode 1000 and is flat from there. Reward plateaus at
+5.47 against DQN's roughly 5.8-6.0 on the identical reward function. This is not an
+undertrained run in the sense of a curve still climbing; it is a converged run that
+found a worse optimum. Adding episodes alone will not close the gap.
+
+## Finding 22: Evaluation HP matches training HP, ruling out a load or eval-mode bug
+
+Training plateau HP is 13.7 (episodes 2500-3000); evaluation HP is 12.4. The two agree.
+This is the check that the earlier DQN save/load bug taught us to run, and PPO passes it.
+The 98% evaluation win rate against 97% at the training plateau is likewise consistent,
+so deterministic argmax at evaluation is not degrading the policy relative to the
+stochastic policy used in training.
+
+## Finding 23: PPO and DQN are indistinguishable after fight 1 and diverge only across the sequence
+
+This is the most important result of the PPO run.
+
+| | after fight 1 | after fight 4 |
+|---|---|---|
+| DQN | 58.4 HP | 31.1 HP |
+| PPO | 57.0 HP | 12.4 HP |
+| gap | 1.4 HP | 18.7 HP |
+
+Fight 1 is the same JawWorm under the same seeds in both the single and four-fight
+suites, so DQN's single-fight HP of 58.4 is directly comparable to PPO's fight-1 exit HP.
+The two algorithms are 1.4 HP apart after one encounter and 18.7 HP apart after four.
+
+A single-encounter evaluation would have concluded that DQN and PPO are equivalent.
+The benchmark separates them only because HP persists. This is the ceiling-effect
+argument from Finding 2, but demonstrated with two competent learned agents rather than
+against a random baseline, which is a much stronger form of the claim.
+
+**TODO:** extract per-fight HP for DQN from its eval_results.json (the `per_fight_hp`
+field is already recorded) to fill in the fight 2 and 3 rows. That completes the
+divergence table and makes it the centerpiece figure for Section 6.3.
+
+## Finding 24: PPO's HP loss is concentrated in fights 2 and 3, not fight 1 or 4
+
+Per-fight breakdown, averaged over 50 evaluation episodes:
+
+| fight | enter HP | exit HP | damage taken |
+|---|---|---|---|
+| 1 JawWorm | 80.0 | 57.0 | 23.0 |
+| 2 SwampLeech | 63.0 | 35.4 | 27.6 |
+| 3 Goblins | 41.4 | 14.7 | 26.7 |
+| 4 Cultist | 20.7 | 12.4 | 8.3 |
+
+Fight 1 damage of 23.0 is close to DQN's single-fight 21.6, confirming comparable
+basic play. Fights 2 and 3 each cost roughly 27 HP, which is where the budget is
+spent. Fight 4 costs only 8.3 because PPO kills the Cultist before Ritual scaling
+becomes dangerous, consistent with the 1, 3, 5 damage progression over roughly three
+enemy turns.
+
+Interpretation: PPO did not fail to learn urgency against the Cultist. It failed to
+learn conservation in the middle of the sequence, specifically against the SwampLeech
+patience test and the goblin target-prioritization test.
+
+## Finding 25: PPO survives fight 4 on a thin margin
+
+Twelve of 50 episodes (24%) enter fight 4 at 16 HP or below. The minimum HP entering
+fight 4 is 9. Six episodes finish the benchmark at 5 HP or less. The single loss
+(seed 99) occurs on fight 4 after clearing the first three.
+
+PPO's 98% win rate is therefore not a comfortable 98%. It is winning the last fight
+by a small and variable margin created by a fast kill rather than by arriving with a
+healthy HP pool. On a harder fifth encounter, or on a permuted order where the Cultist
+comes earlier and something costlier comes last, this margin would likely not hold.
+The permutation experiment should be read with this in mind.
+
+## Finding 26: PPO has the tightest turn distribution of any agent
+
+PPO turns: mean 59.1, sd 3.3, range 55 to 70. Final HP: mean 12.4, sd 6.2, median 12.5.
+
+This is a highly deterministic policy. It does not win by occasionally getting lucky;
+it executes nearly the same plan every episode. The tightness is evidence against the
+alternative explanation that the 98% win rate is noise around a weaker policy.
+
+Note this cuts against the turn-count framing in the draft: PPO is both the fastest
+learned agent (59.1 versus DQN's 66.7) and the one that takes the most damage (85.6
+versus 66.9). Turn count on its own is not a quality measure. The correct reading is
+that DQN spends turns on blocking and sequencing to buy HP, while PPO races. Rewrite
+the Section 6.4 turn-count paragraph around damage per turn rather than turns alone.
+
+## Finding 27: The win-rate difference is not statistically significant; the HP difference is the real result
+
+DQN 50/50 versus PPO 49/50 is a Fisher exact p of 1.0. At n=50 these two win rates are
+indistinguishable. Do not write "DQN outperforms PPO on win rate."
+
+The defensible claim is about HP: 31.1 versus 12.4, a 2.5x difference, with PPO's own
+sd of 6.2 showing the spread is narrow relative to the gap. Compute a two-sample test
+on the per-episode final HP arrays once DQN's episode records are pulled, and report
+that number instead.
+
+## Finding 28: The DQN versus PPO comparison has a compute confound that must be disclosed
+
+Both algorithms trained for 3000 episodes on the identical state encoding, reward, and
+benchmark. They did not receive comparable optimization.
+
+- DQN calls `optimize_model()` once per environment step, roughly 180,000 gradient updates.
+- PPO runs 4 epochs per 8-episode rollout, roughly 7,500 gradient updates.
+
+That is a factor of roughly 24. Equal episode budget is not equal compute budget, and
+this is exactly the on-policy sample-efficiency tradeoff. A reviewer will raise it.
+Either disclose it plainly in the experimental setup or run a matched-gradient-step
+PPO variant. Disclosure is cheaper and sufficient if stated clearly.
+
+## Finding 29: Hypotheses for the lower PPO optimum, ordered by expected effect
+
+1. **Entropy bonus.** `ENT_COEF=0.01` keeps the policy stochastic throughout training.
+   A policy that must tolerate its own sampling noise cannot rely on exact sequencing
+   such as Bash into Strike inside the Vulnerable window, which is precisely the
+   mechanism HP-efficient play depends on. It converges on a noise-robust race instead.
+2. **Advantage normalization under near-saturated win rate.** Once nearly every episode
+   wins, almost all reward variance comes from the HP term. Per-batch normalization plus
+   PPO clipping leaves a weak incremental gradient on exactly the signal that matters.
+3. **Credit assignment across roughly 60 steps.** Terminal-only reward plus GAE asks a
+   single value function to attribute a block played 40 steps earlier. DQN's bootstrapped
+   per-step targets propagate this more directly.
+
+Cheap experiments, each one retrain: anneal `ENT_COEF` to zero; raise `UPDATE_EPOCHS` to
+10 and `EPISODES_PER_UPDATE` to 16; evaluate with stochastic sampling rather than argmax.
+
+---
+
+## For the paper
+
+**Section 6 (algorithm comparison).** Both learned agents outperform every non-learning
+baseline on the four-fight benchmark. PPO reaches a 98% win rate against 88% for the
+aggressive heuristic, 70% for depth-3 search, 56% for LLM CoT, and 20% for the LLM. The
+two learned agents are statistically indistinguishable on win rate (50/50 versus 49/50,
+Fisher exact p = 1.0) but differ substantially in health conservation: DQN exits the
+benchmark with 31.1 HP remaining against PPO's 12.4, having taken 66.9 damage against
+85.6. The off-policy agent purchases this margin with turns, averaging 66.7 against
+PPO's 59.1. Turn count alone is therefore not a proficiency measure in this environment;
+damage taken per turn is the discriminating quantity.
+
+**Section 6 (why the multi-encounter structure matters).** The two learned agents are
+separable only across the sequence. After the first encounter they are 1.4 HP apart
+(58.4 against 57.0) and take nearly identical damage (21.6 against 23.0). After four
+encounters the gap is 18.7 HP. PPO loses roughly 27 HP in each of the second and third
+encounters while DQN conserves, and arrives at the final encounter with an average of
+20.7 HP, entering below 16 HP in 24% of episodes. It survives by killing the Cultist
+before Ritual scaling compounds rather than by arriving healthy. A single-encounter
+evaluation, the protocol used in all prior MiniSTS agent work, would have reported these
+two policies as equivalent. The benchmark distinguishes them because health persists
+across encounters, which is the property the evaluation was designed to expose.
+
+**Section 5 or Limitations (compute disclosure).** Both agents were trained for 3000
+episodes on identical state encodings, reward functions, and encounter sequences. The
+budgets are matched in episodes but not in gradient updates: the off-policy agent
+performs an optimization step at every environment transition, roughly 180,000 updates,
+while the on-policy agent performs four epochs per eight-episode rollout, roughly 7,500.
+The comparison should therefore be read as a comparison at equal environment interaction,
+which is the standard on-policy versus off-policy sample-efficiency framing, rather than
+at equal compute.
